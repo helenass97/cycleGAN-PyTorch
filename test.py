@@ -11,7 +11,7 @@ import numpy as np
 from sklearn.metrics import mean_absolute_error
 from skimage.metrics import peak_signal_noise_ratio
 from calculate_fid import calculate_fid
-
+import tf 
 
 def test(args):
 
@@ -67,11 +67,20 @@ def test(args):
         a_recon_test = Gab(b_fake_test)
         b_recon_test = Gba(a_fake_test)
 
-        list_T1_mae.append(mean_absolute_error(np.squeeze(b_real_test),np.squeeze(b_recon_test)))
-        list_T1_psnr.append(peak_signal_noise_ratio(np.squeeze(b_real_test),np.squeeze(b_recon_test)))
-        list_T1_fid.append(calculate_fid(np.squeeze(b_real_test),np.squeeze(b_recon_test)))
+        #o que tinha no Google Colab - basicamente está me a dar só 1 valor ... tenho de fazer um loop como tinha nas outras networks
+        br_to_cpu=b_real_test.cpu()
+        brec_to_cpu=b_recon_test.cpu()
+        br_np=np.squeeze(br_to_cpu)
+        brec_np=np.squeeze(brec_to_cpu)
+        br_calc=br_np[1,:,:]
+        brec_calc=brec_np[1,:,:]
+
+
+        list_T1_mae.append(mean_absolute_error(np.squeeze(br_calc),np.squeeze(brec_calc)))
+        list_T1_psnr.append(peak_signal_noise_ratio(np.squeeze(br_calc),np.squeeze(brec_calc)))
+        list_T1_fid.append(calculate_fid(np.squeeze(br_calc),np.squeeze(brec_calc)))
         
-        
+     
         print("Mean of MAE = " + str(np.mean(list_T1_mae)))
         print("Mean of PSNR = " + str(np.mean(list_T1_psnr)))
         print("Mean of FID = " + str(np.mean(list_T1_fid)))
