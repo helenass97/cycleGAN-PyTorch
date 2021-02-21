@@ -11,7 +11,7 @@ import numpy as np
 from sklearn.metrics import mean_absolute_error
 from skimage.metrics import peak_signal_noise_ratio
 from calculate_fid import calculate_fid
-import tf #to print shape of tensor with tf.shape() 
+import tensorflow as tf #to print shape of tensor with tf.shape() 
 
 def test(args):
 
@@ -67,7 +67,7 @@ def test(args):
     list_T1_psnr=[]
     list_T1_fid=[]
     
-  # for b test dataset - corresponds to T1 images
+ # for b test dataset - corresponds to T1 images
     for imagesT1 in b_real_test:    
                  
           with torch.no_grad():
@@ -80,32 +80,36 @@ def test(args):
             
             #o que tinha no Google Colab - não sei se devo continuar com isto 
             imagesT1=imagesT1.cpu()
-            print('images T1 size b4 squeezed:', tf.shape(imagesT1))
+            #print('images T1 size b4 squeezed:', tf.shape(imagesT1))
 
             #br_to_cpu=b_real_test.cpu() #isto aqui não é b_real_test
             brec_to_cpu=b_recon_test.cpu()
             brec_to_cpu = brec_to_cpu.view(batch_size, 3, 256, 256)
-            print('tensor size:' , tf.shape(brec_to_cpu))
+            #print('tensor size:' , tf.shape(brec_to_cpu))
             brec_to_cpu = brec_to_cpu.numpy()
-            print('numpy size:' , brec_to_cpu.size)
+            #print('numpy size:' , brec_to_cpu.size)
             
 
             imagesT1=np.squeeze(imagesT1) # squeezed to be [3, 256, 256]
-            print('images T1 size squeezed:' , brec_to_cpu.size)
+            #print('images T1 size squeezed:' , brec_to_cpu.size)
             brec_to_cpu=np.squeeze(brec_to_cpu) # squeezed to be [3, 256, 256]
             
             imagesT1=imagesT1[1,:,:].numpy() #choose 1 channel of the RGB 
             brec_to_cpu=brec_to_cpu[1,:,:] #choose 1 channel of the RGB 
-            #print(brec_to_cpu.size)
+            print('output squeezed:' , brec_to_cpu.size)
             
-            images_fid=imagesT1.reshape(batch_size, imagesT1.size)
-            brec_fid= brec_to_cpu.reshape(batch_size,brec_to_cpu.size)
-            
-          for batch in range(batch_size):
+            images_fid=imagesT1.reshape((1, 256, 256)) # check if it is this or reshape(1,256,256) - see AE_T1T2 the shape and size of the tensors before going in the MAE
+            print('images fid :' , images_fid.shape)
+
+            brec_fid= brec_to_cpu.reshape((1, 256, 256))
+            print('outputs fid :' , brec_fid.shape)
+
+
+          for batch in range(batch_size): # I can delete this for loop because batch_size= 1 (but for different batch_sizes is better to keep it)
                
              list_T1_mae.append(mean_absolute_error(imagesT1[batch],brec_to_cpu[batch]))
              list_T1_psnr.append(peak_signal_noise_ratio(imagesT1[batch],brec_to_cpu[batch]))
-             list_T1_fid.append(calculate_fid(imagesT1[batch],brec_to_cpu[batch]))
+             list_T1_fid.append(calculate_fid(images_fid[batch],brec_fid[batch]))
              
              
     
