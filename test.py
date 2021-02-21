@@ -11,7 +11,7 @@ import numpy as np
 from sklearn.metrics import mean_absolute_error
 from skimage.metrics import peak_signal_noise_ratio
 from calculate_fid import calculate_fid
-import tf 
+import tf #to print shape of tensor with tf.shape() 
 
 def test(args):
 
@@ -51,7 +51,9 @@ def test(args):
     
     a_real_test = iter(a_test_loader)
     b_real_test=iter(b_test_loader)
-    a_real_test, b_real_test = utils.cuda([a_real_test, b_real_test])
+    #a_real_test, b_real_test = utils.cuda([a_real_test, b_real_test])
+    
+    print(tf.shape(b_real_test.next()[0]))
     
     device = torch.device("cuda")
     
@@ -62,11 +64,11 @@ def test(args):
     list_T1_psnr=[]
     list_T1_fid=[]
     
-# for b test dataset - corresponds to T1 images
+    # for b test dataset - corresponds to T1 images
     for imagesT1 in b_real_test:    
                  
           with torch.no_grad():
-
+            
             imagesT1=imagesT1[0].to(device)
 
             a_fake_test = Gab(imagesT1) 
@@ -74,7 +76,8 @@ def test(args):
             
             
             #o que tinha no Google Colab - não sei se devo continuar com isto 
-            br_to_cpu=b_real_test.cpu() #isto aqui não é b_real_test
+            imagesT1=imagesT1.cpu()
+            #br_to_cpu=b_real_test.cpu() #isto aqui não é b_real_test
             brec_to_cpu=b_recon_test.cpu()
             
             # br_np=np.squeeze(br_to_cpu)
@@ -86,7 +89,7 @@ def test(args):
             
           for batch in range(batch_size=args.batch_size):
                 
-             list_T1_mae.append(mean_absolute_error(np.squeeze(br_to_cpu[batch]),np.squeeze(brec_to_cpu[batch])))
+             list_T1_mae.append(mean_absolute_error(np.squeeze(imagesT1[batch]),np.squeeze(brec_to_cpu[batch])))
              list_T1_psnr.append(peak_signal_noise_ratio(np.squeeze(br_to_cpu[batch]),np.squeeze(brec_to_cpu[batch])))
              list_T1_fid.append(calculate_fid(np.squeeze(br_to_cpu[batch]),np.squeeze(brec_to_cpu[batch])))
              
