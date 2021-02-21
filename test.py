@@ -44,7 +44,7 @@ def test(args):
         print(' [*] No checkpoint!')
 
 
-    """ run """
+ """ run """
     # a_real_test = Variable(iter(a_test_loader).next()[0], requires_grad=True)
     # b_real_test = Variable(iter(b_test_loader).next()[0], requires_grad=True)
     # a_real_test, b_real_test = utils.cuda([a_real_test, b_real_test])
@@ -52,11 +52,14 @@ def test(args):
     a_real_test = iter(a_test_loader)
     b_real_test=iter(b_test_loader)
     #a_real_test, b_real_test = utils.cuda([a_real_test, b_real_test])
-    
-    print(tf.shape(b_real_test.next()[0]))
+    tensor=tf.shape(np.squeeze(b_real_test.next()[0]))
+    print(tensor)
+    print(tensor.numpy())
+    #print(tf.shape(np.squeeze(b_real_test.next()[0])))
     
     device = torch.device("cuda")
-    
+    batch_size= args.batch_size
+
     Gab.eval()
     Gba.eval()
     
@@ -64,7 +67,7 @@ def test(args):
     list_T1_psnr=[]
     list_T1_fid=[]
     
-    # for b test dataset - corresponds to T1 images
+  # for b test dataset - corresponds to T1 images
     for imagesT1 in b_real_test:    
                  
           with torch.no_grad():
@@ -77,21 +80,32 @@ def test(args):
             
             #o que tinha no Google Colab - não sei se devo continuar com isto 
             imagesT1=imagesT1.cpu()
+            print('images T1 size b4 squeezed:', tf.shape(imagesT1))
+
             #br_to_cpu=b_real_test.cpu() #isto aqui não é b_real_test
             brec_to_cpu=b_recon_test.cpu()
+            brec_to_cpu = brec_to_cpu.view(batch_size, 3, 256, 256)
+            print('tensor size:' , tf.shape(brec_to_cpu))
+            brec_to_cpu = brec_to_cpu.numpy()
+            print('numpy size:' , brec_to_cpu.size)
             
-            # br_np=np.squeeze(br_to_cpu)
-            # brec_np=np.squeeze(brec_to_cpu)
+
+            imagesT1=np.squeeze(imagesT1) # squeezed to be [3, 256, 256]
+            print('images T1 size squeezed:' , brec_to_cpu.size)
+            brec_to_cpu=np.squeeze(brec_to_cpu) # squeezed to be [3, 256, 256]
             
-            # br_calc=br_np[1,:,:]
-            # brec_calc=brec_np[1,:,:]
+            imagesT1=imagesT1[1,:,:].numpy() #choose 1 channel of the RGB 
+            brec_to_cpu=brec_to_cpu[1,:,:] #choose 1 channel of the RGB 
+            #print(brec_to_cpu.size)
             
+            images_fid=imagesT1.reshape(batch_size, imagesT1.size)
+            brec_fid= brec_to_cpu.reshape(batch_size,brec_to_cpu.size)
             
-          for batch in range(batch_size=args.batch_size):
-                
-             list_T1_mae.append(mean_absolute_error(np.squeeze(imagesT1[batch]),np.squeeze(brec_to_cpu[batch])))
-             list_T1_psnr.append(peak_signal_noise_ratio(np.squeeze(br_to_cpu[batch]),np.squeeze(brec_to_cpu[batch])))
-             list_T1_fid.append(calculate_fid(np.squeeze(br_to_cpu[batch]),np.squeeze(brec_to_cpu[batch])))
+          for batch in range(batch_size):
+               
+             list_T1_mae.append(mean_absolute_error(imagesT1[batch],brec_to_cpu[batch]))
+             list_T1_psnr.append(peak_signal_noise_ratio(imagesT1[batch],brec_to_cpu[batch]))
+             list_T1_fid.append(calculate_fid(imagesT1[batch],brec_to_cpu[batch]))
              
              
     
