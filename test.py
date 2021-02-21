@@ -45,14 +45,13 @@ def test(args):
 
 
     """ run """
-    a_real_test = Variable(iter(a_test_loader).next()[0], requires_grad=True)
-    b_real_test = Variable(iter(b_test_loader).next()[0], requires_grad=True)
+    # a_real_test = Variable(iter(a_test_loader).next()[0], requires_grad=True)
+    # b_real_test = Variable(iter(b_test_loader).next()[0], requires_grad=True)
+    # a_real_test, b_real_test = utils.cuda([a_real_test, b_real_test])
+    
+    a_real_test = iter(a_test_loader)
+    b_real_test=iter(b_test_loader)
     a_real_test, b_real_test = utils.cuda([a_real_test, b_real_test])
-    
-    # #calculate evaluation metrics
-    # dataiter_a = iter(a_test_loader)
-    # dataiter_b=iter(b_test_loader)
-    
      
     Gab.eval()
     Gba.eval()
@@ -61,41 +60,57 @@ def test(args):
     list_T1_psnr=[]
     list_T1_fid=[]
     
-    with torch.no_grad():
-        a_fake_test = Gab(b_real_test) 
-        b_fake_test = Gba(a_real_test)
-        a_recon_test = Gab(b_fake_test)
-        b_recon_test = Gba(a_fake_test)
-
-        #o que tinha no Google Colab - basicamente está me a dar só 1 valor ... tenho de fazer um loop como tinha nas outras networks
-        br_to_cpu=b_real_test.cpu()
-        brec_to_cpu=b_recon_test.cpu()
-        br_np=np.squeeze(br_to_cpu)
-        brec_np=np.squeeze(brec_to_cpu)
-        br_calc=br_np[1,:,:]
-        brec_calc=brec_np[1,:,:]
-
-
-        list_T1_mae.append(mean_absolute_error(np.squeeze(br_calc),np.squeeze(brec_calc)))
-        list_T1_psnr.append(peak_signal_noise_ratio(np.squeeze(br_calc),np.squeeze(brec_calc)))
-        list_T1_fid.append(calculate_fid(np.squeeze(br_calc),np.squeeze(brec_calc)))
+    # for b test dataset - corresponds to T1 images
+    for imagesT1 in b_real_test:    
         
-     
-        print("Mean of MAE = " + str(np.mean(list_T1_mae)))
-        print("Mean of PSNR = " + str(np.mean(list_T1_psnr)))
-        print("Mean of FID = " + str(np.mean(list_T1_fid)))
-
-        #print variance of MAE, PSNR, FID
-        print("Variance of MAE = " + str(np.var(list_T1_mae)))
-        print("Variance of PSNR = " + str(np.var(list_T1_psnr)))
-        print("Variance of FID = " + str(np.var(list_T1_fid)))
+        with torch.no_grad():
+            a_fake_test = Gab(imagesT1) 
+            b_recon_test = Gba(a_fake_test) 
+            
+            
+            #o que tinha no Google Colab - não sei se devo continuar com isto 
+            br_to_cpu=b_real_test.cpu()
+            brec_to_cpu=b_recon_test.cpu()
+            
+            # br_np=np.squeeze(br_to_cpu)
+            # brec_np=np.squeeze(brec_to_cpu)
+            
+            # br_calc=br_np[1,:,:]
+            # brec_calc=brec_np[1,:,:]
+            
+            
+            for batch in range(batch_size=args.batch_size):
+                
+             list_T1_mae.append(mean_absolute_error(np.squeeze(br_to_cpu[batch]),np.squeeze(brec_to_cpu[batch])))
+             list_T1_psnr.append(peak_signal_noise_ratio(np.squeeze(br_to_cpu[batch]),np.squeeze(brec_to_cpu[batch])))
+             list_T1_fid.append(calculate_fid(np.squeeze(br_to_cpu[batch]),np.squeeze(brec_to_cpu[batch])))
+             
+             
+    
+    # for a test dataset - corresponds to T2 images
+    for imagesT2 in a_real_test:  
         
-        
-# a_real_test= T2 real ; b_fake_test= T1 translated ; a_recon_test = T2 reconstructed | b_real_test= T1 real ; a_fake_test = T2 translated ; b_recon_test= T1 reconstructed
-    pic = (torch.cat([a_real_test, b_fake_test, a_recon_test, b_real_test, a_fake_test, b_recon_test], dim=0).data + 1) / 2.0
-
-    if not os.path.isdir(args.results_dir):
-        os.makedirs(args.results_dir)
-
-    torchvision.utils.save_image(pic, args.results_dir+'/sample.jpg', nrow=3)
-
+        with torch.no_grad():
+            
+            b_fake_test = Gba(imagesT2)
+            a_recon_test = Gab(b_fake_test)  
+            
+            
+    #print mean of MAE, PSNR, FID       
+    print("Mean of MAE = " + str(np.mean(list_T1_mae)))
+    print("Mean of PSNR = " + str(np.mean(list_T1_psnr)))
+    print("Mean of FID = " + str(np.mean(list_T1_fid)))
+    
+    #print variance of MAE, PSNR, FID
+    print("Variance of MAE = " + str(np.var(list_T1_mae)))
+    print("Variance of PSNR = " + str(np.var(list_T1_psnr)))
+    print("Variance of FID = " + str(np.var(list_T1_fid)))                     
+            
+    # a_real_test= T2 real ; b_fake_test= T1 translated ; a_recon_test = T2 reconstructed | b_real_test= T1 real ; a_fake_test = T2 translated ; b_recon_test= T1 reconstructed
+        pic = (torch.cat([a_real_test[0], b_fake_test[0], a_recon_test[0], b_real_test[0], a_fake_test[0], b_recon_test[0]], dim=0).data + 1) / 2.0
+    
+        if not os.path.isdir(args.results_dir):
+            os.makedirs(args.results_dir)
+    
+        torchvision.utils.save_image(pic, args.results_dir+'/sample.jpg', nrow=3)
+    
