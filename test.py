@@ -52,7 +52,9 @@ def test(args):
     a_real_test = iter(a_test_loader)
     b_real_test=iter(b_test_loader)
     a_real_test, b_real_test = utils.cuda([a_real_test, b_real_test])
-     
+    
+    device = torch.device("cuda")
+    
     Gab.eval()
     Gba.eval()
     
@@ -60,16 +62,19 @@ def test(args):
     list_T1_psnr=[]
     list_T1_fid=[]
     
-    # for b test dataset - corresponds to T1 images
+# for b test dataset - corresponds to T1 images
     for imagesT1 in b_real_test:    
-        
-        with torch.no_grad():
+                 
+          with torch.no_grad():
+
+            imagesT1=imagesT1[0].to(device)
+
             a_fake_test = Gab(imagesT1) 
             b_recon_test = Gba(a_fake_test) 
             
             
             #o que tinha no Google Colab - não sei se devo continuar com isto 
-            br_to_cpu=b_real_test.cpu()
+            br_to_cpu=b_real_test.cpu() #isto aqui não é b_real_test
             brec_to_cpu=b_recon_test.cpu()
             
             # br_np=np.squeeze(br_to_cpu)
@@ -79,7 +84,7 @@ def test(args):
             # brec_calc=brec_np[1,:,:]
             
             
-            for batch in range(batch_size=args.batch_size):
+          for batch in range(batch_size=args.batch_size):
                 
              list_T1_mae.append(mean_absolute_error(np.squeeze(br_to_cpu[batch]),np.squeeze(brec_to_cpu[batch])))
              list_T1_psnr.append(peak_signal_noise_ratio(np.squeeze(br_to_cpu[batch]),np.squeeze(brec_to_cpu[batch])))
@@ -91,7 +96,9 @@ def test(args):
     for imagesT2 in a_real_test:  
         
         with torch.no_grad():
-            
+
+            imagesT2=imagesT2[0].to(device)
+
             b_fake_test = Gba(imagesT2)
             a_recon_test = Gab(b_fake_test)  
             
@@ -107,10 +114,10 @@ def test(args):
     print("Variance of FID = " + str(np.var(list_T1_fid)))                     
             
     # a_real_test= T2 real ; b_fake_test= T1 translated ; a_recon_test = T2 reconstructed | b_real_test= T1 real ; a_fake_test = T2 translated ; b_recon_test= T1 reconstructed
-        pic = (torch.cat([a_real_test[0], b_fake_test[0], a_recon_test[0], b_real_test[0], a_fake_test[0], b_recon_test[0]], dim=0).data + 1) / 2.0
+    pic = (torch.cat([a_real_test[0], b_fake_test[0], a_recon_test[0], b_real_test[0], a_fake_test[0], b_recon_test[0]], dim=0).data + 1) / 2.0
     
-        if not os.path.isdir(args.results_dir):
-            os.makedirs(args.results_dir)
+    if not os.path.isdir(args.results_dir):
+        os.makedirs(args.results_dir)
     
-        torchvision.utils.save_image(pic, args.results_dir+'/sample.jpg', nrow=3)
+    torchvision.utils.save_image(pic, args.results_dir+'/sample.jpg', nrow=3)
     
