@@ -26,8 +26,8 @@ def test(args):
     b_test_data = dsets.ImageFolder(dataset_dirs['testB'], transform=transform)
 
 
-    a_test_loader = torch.utils.data.DataLoader(a_test_data, batch_size=args.batch_size, shuffle=True, num_workers=4)
-    b_test_loader = torch.utils.data.DataLoader(b_test_data, batch_size=args.batch_size, shuffle=True, num_workers=4)
+    a_test_loader = torch.utils.data.DataLoader(a_test_data, batch_size=args.batch_size, shuffle=False, num_workers=4)
+    b_test_loader = torch.utils.data.DataLoader(b_test_data, batch_size=args.batch_size, shuffle=False, num_workers=4)
 
     Gab = define_Gen(input_nc=3, output_nc=3, ngf=args.ngf, netG='resnet_9blocks', norm=args.norm, 
                                                     use_dropout= not args.no_dropout, gpu_ids=args.gpu_ids)
@@ -43,22 +43,25 @@ def test(args):
     except:
         print(' [*] No checkpoint!')
 
-
- """ run """
-    # a_real_test = Variable(iter(a_test_loader).next()[0], requires_grad=True)
+    
+  # a_real_test = Variable(iter(a_test_loader).next()[0], requires_grad=True)
     # b_real_test = Variable(iter(b_test_loader).next()[0], requires_grad=True)
     # a_real_test, b_real_test = utils.cuda([a_real_test, b_real_test])
     
     a_real_test = iter(a_test_loader)
     b_real_test=iter(b_test_loader)
     #a_real_test, b_real_test = utils.cuda([a_real_test, b_real_test])
-    tensor=tf.shape(np.squeeze(b_real_test.next()[0]))
-    print(tensor)
-    print(tensor.numpy())
-    #print(tf.shape(np.squeeze(b_real_test.next()[0])))
+    #tensor=tf.shape(np.squeeze(b_real_test.next()[0]))
+    #print(tensor)
+    #print(tensor.numpy())
+
     
     device = torch.device("cuda")
     batch_size= args.batch_size
+
+    #real examples for plotting (save pic)
+    a_real_example=(a_real_test.next()[0]).to(device)
+    b_real_example=(b_real_test.next()[0]).to(device)
 
     Gab.eval()
     Gba.eval()
@@ -96,16 +99,16 @@ def test(args):
             
             imagesT1=imagesT1[1,:,:].numpy() #choose 1 channel of the RGB 
             brec_to_cpu=brec_to_cpu[1,:,:] #choose 1 channel of the RGB 
-            print('output squeezed:' , brec_to_cpu.size)
+            #print('output squeezed:' , brec_to_cpu.size)
             
             images_fid=imagesT1.reshape((1, 256, 256)) # check if it is this or reshape(1,256,256) - see AE_T1T2 the shape and size of the tensors before going in the MAE
-            print('images fid :' , images_fid.shape)
+            #print('images fid :' , images_fid.shape)
 
             brec_fid= brec_to_cpu.reshape((1, 256, 256))
-            print('outputs fid :' , brec_fid.shape)
+            #print('outputs fid :' , brec_fid.shape)
 
 
-          for batch in range(batch_size): # I can delete this for loop because batch_size= 1 (but for different batch_sizes is better to keep it)
+          for batch in range(batch_size):
                
              list_T1_mae.append(mean_absolute_error(imagesT1[batch],brec_to_cpu[batch]))
              list_T1_psnr.append(peak_signal_noise_ratio(imagesT1[batch],brec_to_cpu[batch]))
@@ -133,9 +136,21 @@ def test(args):
     print("Variance of MAE = " + str(np.var(list_T1_mae)))
     print("Variance of PSNR = " + str(np.var(list_T1_psnr)))
     print("Variance of FID = " + str(np.var(list_T1_fid)))                     
-            
+
+
+    #Example for saving pic
+    with torch.no_grad():
+      #T2 images
+      b_fake_example = Gba(a_real_example) 
+      a_recon_example = Gab(b_fake_example)
+
+      #T1 images
+      a_fake_example = Gab(b_real_example) 
+      b_recon_example = Gba(a_fake_example)
+
+
     # a_real_test= T2 real ; b_fake_test= T1 translated ; a_recon_test = T2 reconstructed | b_real_test= T1 real ; a_fake_test = T2 translated ; b_recon_test= T1 reconstructed
-    pic = (torch.cat([a_real_test[0], b_fake_test[0], a_recon_test[0], b_real_test[0], a_fake_test[0], b_recon_test[0]], dim=0).data + 1) / 2.0
+    pic = (torch.cat([a_real_example, b_fake_example, a_recon_example, b_real_example, a_fake_example, b_recon_example], dim=0).data + 1) / 2.0
     
     if not os.path.isdir(args.results_dir):
         os.makedirs(args.results_dir)
