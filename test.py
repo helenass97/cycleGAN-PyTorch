@@ -140,11 +140,11 @@ def test(args):
 
     #Example for saving pic
     with torch.no_grad():
-      #T2 images
+      #input is T2 images
       b_fake_example = Gba(a_real_example) 
       a_recon_example = Gab(b_fake_example)
 
-      #T1 images
+      #input is T1 images
       a_fake_example = Gab(b_real_example) 
       b_recon_example = Gba(a_fake_example)
 
