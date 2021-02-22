@@ -1,0 +1,4 @@
+Train A folder = T2 slices for train: 2232 total
+Train B folder = T1 slices for train: 2232 total
+Test A folder = T2 slices for test: 558 total
+Test B folder = T1 slices for test: 558 total
