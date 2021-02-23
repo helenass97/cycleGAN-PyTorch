@@ -15,12 +15,8 @@ import tensorflow as tf #to print shape of tensor with tf.shape()
 
 def test(args):
 
-    # transform = transforms.Compose(
-    #     [transforms.Resize((args.crop_height,args.crop_width)),
-    #      transforms.ToTensor(),
-    #      transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])])
+    transform = transforms.Compose([transforms.Resize((args.crop_height,args.crop_width)), transforms.ToTensor(), transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])])
     
-    transform = transforms.Compose([transforms.ToTensor()])
 
     dataset_dirs = utils.get_testdata_link(args.dataset_dir)
 
