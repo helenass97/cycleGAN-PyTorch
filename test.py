@@ -15,10 +15,12 @@ import tensorflow as tf #to print shape of tensor with tf.shape()
 
 def test(args):
 
-    transform = transforms.Compose(
-        [transforms.Resize((args.crop_height,args.crop_width)),
-         transforms.ToTensor(),
-         transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])])
+    # transform = transforms.Compose(
+    #     [transforms.Resize((args.crop_height,args.crop_width)),
+    #      transforms.ToTensor(),
+    #      transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])])
+    
+    transform = transforms.Compose([transforms.ToTensor()])
 
     dataset_dirs = utils.get_testdata_link(args.dataset_dir)
 
@@ -142,4 +144,14 @@ def test(args):
         os.makedirs(args.results_dir)
     
     torchvision.utils.save_image(pic, args.results_dir+'/sample.jpg', nrow=3)
-    
+
+   
+    b_real_example=np.squeeze(b_real_example.cpu())
+    b_fake_example=np.squeeze(b_fake_example.cpu())
+
+    b_real_example=b_real_example[0,:,:].numpy()
+    b_fake_example=b_fake_example[0,:,:].numpy()
+
+    print(mean_absolute_error(np.squeeze(b_real_example),np.squeeze(b_fake_example)))
+    print(peak_signal_noise_ratio(np.squeeze(b_real_example),np.squeeze(b_fake_example)))
+    print(calculate_fid(np.squeeze(b_real_example),np.squeeze(b_fake_example)))    
