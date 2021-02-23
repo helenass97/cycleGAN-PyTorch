@@ -92,21 +92,24 @@ def test(args):
             bfake_to_cpu=np.squeeze(bfake_to_cpu) # squeezed to be [3, 256, 256] before was [1, 3, 256, 256]
             
             
-            imagesT1=imagesT1[1,:,:].numpy() #choose 1 channel of the RGB 
+            imagesT1=imagesT1[0,:,:].numpy() #choose 1 channel of the RGB - output is [1,256,256]
             #brec_to_cpu=brec_to_cpu[1,:,:] #choose 1 channel of the RGB 
-            bfake_to_cpu=bfake_to_cpu[1,:,:] #choose 1 channel of the RGB 
+            bfake_to_cpu=bfake_to_cpu[0,:,:] #choose 1 channel of the RGB 
             
             
-            images_fid=imagesT1.reshape((1, 256, 256)) # check if it is this or reshape(1,256,256) - see AE_T1T2 the shape and size of the tensors before going in the MAE
+            #images_fid=imagesT1.reshape((1, 256, 256)) # check if it is this or reshape(1,256,256) - see AE_T1T2 the shape and size of the tensors before going in the MAE
             #brec_fid= brec_to_cpu.reshape((1, 256, 256))
-            bfake_fid= bfake_to_cpu.reshape((1, 256, 256))
+            #bfake_fid= bfake_to_cpu.reshape((1, 256, 256))
+            
+            #squeeze all to be (256,256)
+            imagesT1=np.squeeze(imagesT1)
+            bfake_to_cpu=np.squeeze(bfake_to_cpu)
             
             #change this to calculate the MAE, PSNR and FID between b_real (from the dataset of T1 images real) and b_fake (the translated T1 images from the T2 slices)
             list_T1_mae.append(mean_absolute_error(imagesT1,bfake_to_cpu))
             list_T1_psnr.append(peak_signal_noise_ratio(imagesT1,bfake_to_cpu))
-            list_T1_fid.append(calculate_fid(images_fid,bfake_fid))
+            list_T1_fid.append(calculate_fid(imagesT1,bfake_to_cpu))
                     
-    
             
     # could add to see the shape/size of the list - should be flatten :
         
