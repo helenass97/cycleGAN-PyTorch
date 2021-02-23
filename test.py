@@ -43,17 +43,10 @@ def test(args):
     except:
         print(' [*] No checkpoint!')
 
-    
-  # a_real_test = Variable(iter(a_test_loader).next()[0], requires_grad=True)
-    # b_real_test = Variable(iter(b_test_loader).next()[0], requires_grad=True)
-    # a_real_test, b_real_test = utils.cuda([a_real_test, b_real_test])
-    
+
+#run test and calculate evaluation metrics   
     a_real_test = iter(a_test_loader)
     b_real_test=iter(b_test_loader)
-    #a_real_test, b_real_test = utils.cuda([a_real_test, b_real_test])
-    #tensor=tf.shape(np.squeeze(b_real_test.next()[0]))
-    #print(tensor)
-    #print(tensor.numpy())
 
     
     device = torch.device("cuda")
@@ -71,85 +64,75 @@ def test(args):
     list_T1_fid=[]
     
  # for b test dataset - corresponds to T1 images
-    for imagesT1 in b_real_test:    
+    for imagesT1, imagesT2 in zip(b_real_test, a_real_test):    
                  
           with torch.no_grad():
             
-            imagesT1=imagesT1[0].to(device)
+            imagesT1=imagesT1[0].to(device) #só o primeiro índice mas então o que têm os outros?
+            imagesT2=imagesT2[0].to(device) 
 
-            a_fake_test = Gab(imagesT1) 
-            b_recon_test = Gba(a_fake_test) 
+            a_fake_test = Gab(imagesT1) #T2 translated
+            b_recon_test = Gba(a_fake_test) #T1 reconstructed 
+            
+            b_fake_test = Gba(imagesT2) #T1 translated
+            a_recon_test = Gab(b_fake_test) #T2 reconstructed
             
             
-            #o que tinha no Google Colab - não sei se devo continuar com isto 
             imagesT1=imagesT1.cpu()
-            #print('images T1 size b4 squeezed:', tf.shape(imagesT1))
-
-            #br_to_cpu=b_real_test.cpu() #isto aqui não é b_real_test
-            brec_to_cpu=b_recon_test.cpu()
-            brec_to_cpu = brec_to_cpu.view(batch_size, 3, 256, 256)
-            #print('tensor size:' , tf.shape(brec_to_cpu))
-            brec_to_cpu = brec_to_cpu.numpy()
-            #print('numpy size:' , brec_to_cpu.size)
+            #brec_to_cpu=b_recon_test.cpu() #T1 reconstructed 
+            bfake_to_cpu=b_fake_test.cpu() #T1 translated 
             
+            
+            #brec_to_cpu = brec_to_cpu.view(batch_size, 3, 256, 256).numpy()
+            bfake_to_cpu = bfake_to_cpu.view(batch_size, 3, 256, 256).numpy()
 
-            imagesT1=np.squeeze(imagesT1) # squeezed to be [3, 256, 256]
-            #print('images T1 size squeezed:' , brec_to_cpu.size)
-            brec_to_cpu=np.squeeze(brec_to_cpu) # squeezed to be [3, 256, 256]
+            
+            imagesT1=np.squeeze(imagesT1) # squeezed to be [3, 256, 256] before was [1, 3, 256, 256]
+            #brec_to_cpu=np.squeeze(brec_to_cpu) # squeezed to be [3, 256, 256] before was [1, 3, 256, 256]
+            bfake_to_cpu=np.squeeze(bfake_to_cpu) # squeezed to be [3, 256, 256] before was [1, 3, 256, 256]
+            
             
             imagesT1=imagesT1[1,:,:].numpy() #choose 1 channel of the RGB 
-            brec_to_cpu=brec_to_cpu[1,:,:] #choose 1 channel of the RGB 
-            #print('output squeezed:' , brec_to_cpu.size)
+            #brec_to_cpu=brec_to_cpu[1,:,:] #choose 1 channel of the RGB 
+            bfake_to_cpu=bfake_to_cpu[1,:,:] #choose 1 channel of the RGB 
+            
             
             images_fid=imagesT1.reshape((1, 256, 256)) # check if it is this or reshape(1,256,256) - see AE_T1T2 the shape and size of the tensors before going in the MAE
-            #print('images fid :' , images_fid.shape)
-
-            brec_fid= brec_to_cpu.reshape((1, 256, 256))
-            #print('outputs fid :' , brec_fid.shape)
-
-
-          for batch in range(batch_size):
-               
-             list_T1_mae.append(mean_absolute_error(imagesT1[batch],brec_to_cpu[batch]))
-             list_T1_psnr.append(peak_signal_noise_ratio(imagesT1[batch],brec_to_cpu[batch]))
-             list_T1_fid.append(calculate_fid(images_fid[batch],brec_fid[batch]))
-             
-             
+            #brec_fid= brec_to_cpu.reshape((1, 256, 256))
+            bfake_fid= bfake_to_cpu.reshape((1, 256, 256))
+            
+            #change this to calculate the MAE, PSNR and FID between b_real (from the dataset of T1 images real) and b_fake (the translated T1 images from the T2 slices)
+            list_T1_mae.append(mean_absolute_error(imagesT1,bfake_to_cpu))
+            list_T1_psnr.append(peak_signal_noise_ratio(imagesT1,bfake_to_cpu))
+            list_T1_fid.append(calculate_fid(images_fid,bfake_fid))
+                    
     
-    # for a test dataset - corresponds to T2 images
-    for imagesT2 in a_real_test:  
+            
+    # could add to see the shape/size of the list - should be flatten :
         
-        with torch.no_grad():
-
-            imagesT2=imagesT2[0].to(device)
-
-            b_fake_test = Gba(imagesT2)
-            a_recon_test = Gab(b_fake_test)  
-            
-            
-    #print mean of MAE, PSNR, FID       
+    #print mean of MAE, PSNR, FID       # compute the mean of the flatten array 
     print("Mean of MAE = " + str(np.mean(list_T1_mae)))
     print("Mean of PSNR = " + str(np.mean(list_T1_psnr)))
     print("Mean of FID = " + str(np.mean(list_T1_fid)))
     
-    #print variance of MAE, PSNR, FID
+    #print variance of MAE, PSNR, FID  # compute the variance of the flatten array 
     print("Variance of MAE = " + str(np.var(list_T1_mae)))
     print("Variance of PSNR = " + str(np.var(list_T1_psnr)))
     print("Variance of FID = " + str(np.var(list_T1_fid)))                     
 
 
-    #Example for saving pic
+    #Example for saving pic - just using the first image example of the datasets to plot the image 
     with torch.no_grad():
       #input is T2 images
-      b_fake_example = Gba(a_real_example) 
-      a_recon_example = Gab(b_fake_example)
+      b_fake_example = Gba(a_real_example) # output is the translated T1 image from the inputed T2 slice
+      a_recon_example = Gab(b_fake_example) # output is the reconstructed T2 slice 
 
       #input is T1 images
-      a_fake_example = Gab(b_real_example) 
-      b_recon_example = Gba(a_fake_example)
+      a_fake_example = Gab(b_real_example) # output is the translated T2 image from the inputed T1 slice
+      b_recon_example = Gba(a_fake_example) # output is the reconstructed T1 slice 
 
 
-    # a_real_test= T2 real ; b_fake_test= T1 translated ; a_recon_test = T2 reconstructed | b_real_test= T1 real ; a_fake_test = T2 translated ; b_recon_test= T1 reconstructed
+    # a_real_example= T2 real ; b_fake_example= T1 translated ; a_recon_example = T2 reconstructed | b_real_example= T1 real ; a_fake_example = T2 translated ; b_recon_example= T1 reconstructed
     pic = (torch.cat([a_real_example, b_fake_example, a_recon_example, b_real_example, a_fake_example, b_recon_example], dim=0).data + 1) / 2.0
     
     if not os.path.isdir(args.results_dir):
